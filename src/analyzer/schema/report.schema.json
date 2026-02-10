@@ -1,0 +1,114 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+        "url": {
+            "type": "string",
+            "format": "uri"
+        },
+        "timestamp": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "scores": {
+            "type": "object",
+            "properties": {
+                "uiux": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                },
+                "performance": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                },
+                "contentWeight": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                },
+                "seo": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                }
+            },
+            "required": [
+                "uiux",
+                "performance",
+                "contentWeight",
+                "seo"
+            ]
+        },
+        "metrics": {
+            "type": "object",
+            "properties": {
+                "loadTimeSeconds": {
+                    "type": "number"
+                },
+                "domDepth": {
+                    "type": "integer"
+                },
+                "scriptCount": {
+                    "type": "integer"
+                },
+                "cssCount": {
+                    "type": "integer"
+                },
+                "imageCount": {
+                    "type": "integer"
+                },
+                "contentClassification": {
+                    "type": "string",
+                    "enum": [
+                        "Amateur",
+                        "Beginner",
+                        "Business",
+                        "Professional",
+                        "Optimized"
+                    ]
+                }
+            }
+        },
+        "bottlenecks": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "severity": {
+                        "type": "string",
+                        "enum": [
+                            "High",
+                            "Medium",
+                            "Low"
+                        ]
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "explanation": {
+                        "type": "string"
+                    },
+                    "fix": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "severity",
+                    "title",
+                    "explanation",
+                    "fix"
+                ]
+            }
+        }
+    },
+    "required": [
+        "url",
+        "scores",
+        "bottlenecks"
+    ]
+}
