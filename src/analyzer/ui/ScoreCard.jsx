@@ -6,7 +6,11 @@ const ScoreCard = ({ title, score, type = "neutral" }) => {
     let bgClass = "bg-platinum";
     let icon = <Info size={20} />;
 
-    if (score >= 80) {
+    if (score === null || score === undefined) {
+    colorClass = "text-steel";
+    bgClass = "bg-slate-100";
+    icon = <Info size={20} />;
+  } else if (score >= 80) {
         colorClass = "text-emerald-600";
         bgClass = "bg-emerald-50";
         icon = <CheckCircle size={20} className="text-emerald-500" />;
@@ -20,22 +24,22 @@ const ScoreCard = ({ title, score, type = "neutral" }) => {
         icon = <AlertOctagon size={20} className="text-rose-500" />;
     }
 
-    return (
-        <div className="p-6 border border-silver rounded bg-white flex flex-col justify-between h-full hover:shadow-md transition-shadow">
+  return (
+    <div className={`p-6 border border-silver rounded ${bgClass} flex flex-col justify-between h-full hover:shadow-md transition-shadow`}>
             <div className="flex justify-between items-start mb-4">
                 <span className="text-xs font-mono uppercase tracking-widest text-steel">{title}</span>
                 {icon}
             </div>
             <div>
-                <div className={`text-5xl font-bold mb-2 ${colorClass}`}>
-                    {score}
-                </div>
-                <div className="h-1 w-full bg-platinum rounded-full overflow-hidden">
-                    <div
-                        className={`h-full rounded-full transition-all duration-1000 ${colorClass.replace('text', 'bg').replace('-600', '-500')}`}
-                        style={{ width: `${score}%` }}
-                    />
-                </div>
+      <div className={`text-5xl font-bold mb-2 ${colorClass}`}>
+        {score === null || score === undefined ? 'N/A' : score}
+      </div>
+      <div className="h-1 w-full bg-platinum rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-1000 ${colorClass.replace('text', 'bg').replace('-600', '-500')}`}
+          style={{ width: score !== null && score !== undefined ? `${score}%` : '0%' }}
+        />
+      </div>
             </div>
         </div>
     );

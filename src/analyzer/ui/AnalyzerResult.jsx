@@ -4,7 +4,7 @@ import ScoreLegend from './ScoreLegend';
 import BottleneckList from './BottleneckList';
 import { RefreshCcw } from 'lucide-react';
 
-const AnalyzerResult = ({ report, onReset }) => {
+const AnalyzerResult = ({ report, onReset, aiReport }) => {
     if (!report) return null;
 
     return (
@@ -56,10 +56,56 @@ const AnalyzerResult = ({ report, onReset }) => {
                 </div>
             </div>
 
-            {/* Bottlenecks */}
-            <BottleneckList bottlenecks={report.bottlenecks} />
+{aiReport && (
+  <div className="mt-6 border-t border-silver pt-6">
+    <div className="flex items-center gap-2 mb-4">
+      <span className="w-2 h-2 rounded-full bg-graphite animate-pulse" />
+      <h3 className="text-xs font-bold uppercase tracking-wider text-graphite">
+        AI Operational Intelligence
+      </h3>
+    </div>
+    <div className="prose prose-sm max-w-none text-steel leading-relaxed [&_h2]:text-sm [&_h2]:font-bold [&_h2]:uppercase [&_h2]:tracking-wider [&_h2]:text-graphite [&_h2]:mt-4 [&_h2]:mb-2 [&_ul]:space-y-1 [&_li]:text-sm [&_ol]:space-y-1 [&_strong]:text-graphite">
+      {aiReport.split('\n').map((line, i) => {
+        if (line.startsWith('## ')) {
+          return (
+            <h2 key={i} className="text-sm font-bold uppercase tracking-wider text-graphite mt-4 mb-2">
+              {line.replace('## ', '')}
+            </h2>
+          );
+        }
+        if (line.startsWith('- ') || line.startsWith('• ')) {
+          return (
+            <p key={i} className="text-sm text-steel flex gap-2 items-start">
+              <span className="text-graphite mt-1 flex-shrink-0">—</span>
+              {line.replace(/^[-•]\s/, '')}
+            </p>
+          );
+        }
+        if (/^\d+\./.test(line)) {
+          return (
+            <p key={i} className="text-sm text-steel flex gap-2 items-start">
+              <span className="font-bold text-graphite flex-shrink-0">
+                {line.match(/^\d+/)?.[0]}.
+              </span>
+              {line.replace(/^\d+\.\s/, '')}
+            </p>
+          );
+        }
+        if (line.trim() === '') return <br key={i} />;
+        return (
+          <p key={i} className="text-sm text-steel">
+            {line}
+          </p>
+        );
+      })}
+    </div>
+  </div>
+)}
 
-            <ScoreLegend />
+{/* Bottlenecks */}
+<BottleneckList bottlenecks={report.bottlenecks} />
+
+<ScoreLegend />
 
             <div className="mt-12 pt-8 border-t border-silver text-center">
                 <p className="text-steel mb-4 text-sm font-mono uppercase tracking-widest">Ready to optimize?</p>

@@ -1,34 +1,51 @@
-export const calculateContentWeight = (doc) => {
-    if (!doc) return { score: 0, label: "Unknown" };
+export function calculateContentWeight(doc) {
+  if (!doc) return { score: null, label: 'Unable to scan', wordCount: 0, ratio: 0, note: 'Site may be protected.' };
 
-    const bodyText = doc.body.textContent || "";
-    const htmlLength = doc.documentElement.innerHTML.length;
-    const textLength = bodyText.replace(/\s+/g, ' ').length;
+  const bodyEl = doc.body || doc.querySelector('body');
+  const allText = (bodyEl?.textContent || '').replace(/\s+/g, ' ').trim();
+  const wordCount = allText.split(' ').filter(w => w.length > 2).length;
 
-    const wordCount = bodyText.split(/\s+/).length;
+  const headings = doc.querySelectorAll('h1, h2, h3')?.length || 0;
+  const paragraphs = doc.querySelectorAll('p')?.length || 0;
+  const images = doc.querySelectorAll('img')?.length || 0;
+  const links = doc.querySelectorAll('a[href]')?.length || 0;
 
-    // Text to HTML ratio
-    const ratio = htmlLength > 0 ? textLength / htmlLength : 0;
+  if (wordCount < 10 && headings === 0) {
+    return { score: null, label: 'Unable to scan', wordCount: 0, ratio: 0, note: 'Site may be protected. Showing estimated score.' };
+  }
 
-    let score = 50; // Start middle
+  let wordScore = 0;
+  if (wordCount >= 800) wordScore = 40;
+  else if (wordCount >= 400) wordScore = 30;
+  else if (wordCount >= 200) wordScore = 20;
+  else if (wordCount >= 100) wordScore = 10;
+  else wordScore = 5;
 
-    // Adjust based on word count
-    if (wordCount < 300) score -= 30; // Too thin
-    else if (wordCount > 2000) score += 10; // Comprehensive? Or bloated? 
-    else score += 20; // Sweet spot
+  let structureScore = 0;
+  if (headings >= 4) structureScore += 15;
+  else if (headings >= 2) structureScore += 10;
+  else if (headings >= 1) structureScore += 5;
+  if (paragraphs >= 5) structureScore += 15;
+  else if (paragraphs >= 3) structureScore += 10;
+  else if (paragraphs >= 1) structureScore += 5;
 
-    // Adjust based on ratio
-    if (ratio < 0.1) score -= 20; // Code heavy, text light including scripts
-    if (ratio > 0.5) score += 10; // Text rich
+  let mediaScore = 0;
+  if (images >= 10) mediaScore = 20;
+  else if (images >= 5) mediaScore = 15;
+  else if (images >= 2) mediaScore = 10;
+  else if (images >= 1) mediaScore = 5;
 
-    score = Math.max(0, Math.min(100, score));
+  let navScore = 0;
+  if (links >= 10) navScore = 10;
+  else if (links >= 5) navScore = 7;
+  else if (links >= 2) navScore = 4;
 
-    let label = "Beginner";
-    if (score <= 20) label = "Amateur";
-    else if (score <= 40) label = "Beginner";
-    else if (score <= 60) label = "Business";
-    else if (score <= 80) label = "Professional";
-    else label = "Optimized";
+  const totalScore = wordScore + structureScore + mediaScore + navScore;
+  let label = 'Minimal';
+  if (totalScore >= 80) label = 'Content Rich';
+  else if (totalScore >= 60) label = 'Professional';
+  else if (totalScore >= 40) label = 'Developing';
+  else if (totalScore >= 20) label = 'Basic';
 
-    return { score, label, wordCount, ratio };
-};
+  return { score: Math.min(100, totalScore), label, wordCount, ratio: 0 };
+}

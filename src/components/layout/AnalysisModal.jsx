@@ -2,15 +2,13 @@ import { useState, useEffect } from 'react'
 import { X, ArrowRight, Loader2 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import gsap from 'gsap'
-import { runAnalysis } from '@/analyzer/services/analyzerApi'
+import { runAnalysis, runAIAnalysis } from '@/analyzer/services/analyzerApi'
 import AnalyzerResult from '@/analyzer/ui/AnalyzerResult'
 
 export function AnalysisModal() {
     const [isOpen, setIsOpen] = useState(false)
     const [step, setStep] = useState('input') // input, analyzing, result
     const [url, setUrl] = useState('')
-    const [email, setEmail] = useState('')
-    const [painPoint, setPainPoint] = useState('')
 
     useEffect(() => {
         const handleOpen = () => setIsOpen(true)
@@ -32,40 +30,65 @@ export function AnalysisModal() {
     }, [isOpen])
 
     const [report, setReport] = useState(null)
+const [technicalResult, setTechnicalResult] = useState(null)
+const [aiReport, setAiReport] = useState('')
+const [analysisError, setAnalysisError] = useState('');
 
-    const handleSubmit = async (e) => {
-        e.preventDefault()
-        setStep('analyzing')
+const handleSubmit = async (e) => {
+  e.preventDefault()
+  setStep('analyzing')
 
-        try {
-            // Run real analysis
-            const result = await runAnalysis(url)
-            setReport(result)
-            setStep('result')
+  try {
+    // Run technical analysis
+    const normalizedUrl = url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`
+    const result = await runAnalysis(normalizedUrl)
+    setReport(result)
+    setTechnicalResult(result)
+    setStep('result')
 
-            // Optional: Still send lead data to webhook if needed, silently
-            const webhookUrl = import.meta.env.VITE_N8N_WEBHOOK_URL
-            if (webhookUrl) {
-                fetch(webhookUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        company_url: url,
-                        bottleneck: painPoint,
-                        subscriber_email: email,
-                        timestamp: new Date().toISOString(),
-                        score_ui: result.scores.uiux,
-                        score_perf: result.scores.performance
-                    })
-                }).catch(err => console.error("Webhook silent fail", err))
-            }
-
-        } catch (error) {
-            console.error('Analysis error:', error)
-            setStep('result') // Error state handled in result or just show partial? 
-            // Ideally we'd show error state, but let's assume result might be null/partial or just handle in UI
-        }
+    // Run AI analysis in background — fails gracefully
+    try {
+      const technicalScores = {
+        systemStructure: result.scores.uiux,
+        loadVelocity: result.scores.performance,
+        contentDensity: result.scores.contentWeight,
+        optimization: result.scores.seo,
+        loadTime: result.metrics.loadTimeSeconds?.toFixed?.(2) || result.metrics.loadTimeSeconds,
+        domDepth: result.metrics.domDepth,
+        mode: result.metrics.contentClassification,
+      }
+  const aiReport = await runAIAnalysis({
+    url,
+    technicalScores,
+    bottlenecks: result.bottlenecks,
+  })
+      setAiReport(aiReport)
+    } catch (aiErr) {
+      console.error('AI analysis failed:', aiErr)
+      setAiReport('')
     }
+
+    // Optional: Still send lead data to webhook if needed, silently
+    const webhookUrl = import.meta.env.VITE_N8N_WEBHOOK_URL
+    if (webhookUrl) {
+      fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+        company_url: url,
+          timestamp: new Date().toISOString(),
+          score_ui: result.scores.uiux,
+          score_perf: result.scores.performance,
+        }),
+      }).catch(err => console.error("Webhook silent fail", err))
+    }
+
+  } catch (error) {
+    console.error('Analysis error:', error)
+    setAnalysisError(error.message || 'Analysis failed. Please try another URL.')
+    setStep('result')
+  }
+}
 
     const handleClose = () => {
         gsap.to("#analysis-modal-panel", {
@@ -121,44 +144,18 @@ export function AnalysisModal() {
                                         Company Website URL
                                     </label>
                                     <input
-                                        type="url"
+                                        type="text"
                                         required
-                                        placeholder="https://company.com"
+                                        placeholder="company.com"
                                         className="w-full bg-platinum border border-silver rounded-lg px-4 py-3 text-base text-graphite focus:outline-none focus:ring-2 focus:ring-steel/20 transition-all font-mono"
                                         value={url}
                                         onChange={(e) => setUrl(e.target.value)}
                                     />
-                                </div>
+</div>
 
-                                <div>
-                                    <label className="block text-xs font-bold text-graphite uppercase tracking-wider mb-2">
-                                        Primary Operational Pain Point
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="Describe your biggest bottleneck..."
-                                        className="w-full bg-platinum border border-silver rounded-lg px-4 py-3 text-base text-graphite focus:outline-none focus:ring-2 focus:ring-steel/20 transition-all"
-                                        value={painPoint}
-                                        onChange={(e) => setPainPoint(e.target.value)}
-                                    />
-                                </div>
+</div>
 
-                                <div>
-                                    <label className="block text-xs font-bold text-graphite uppercase tracking-wider mb-2">
-                                        Where should we send the report?
-                                    </label>
-                                    <input
-                                        type="email"
-                                        required
-                                        placeholder="founder@company.com"
-                                        className="w-full bg-platinum border border-silver rounded-lg px-4 py-3 text-base text-graphite focus:outline-none focus:ring-2 focus:ring-steel/20 transition-all"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                    />
-                                </div>
-                            </div>
-
-                            <button
+<button
                                 type="submit"
                                 className="w-full bg-graphite text-white font-bold text-base py-4 rounded-lg hover:bg-graphite/90 transition-all flex items-center justify-center gap-2 uppercase tracking-wide group"
                             >
@@ -196,14 +193,32 @@ export function AnalysisModal() {
                         </div>
                     )}
 
-                    {step === 'result' && (
-                        <div className="max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
-                            <AnalyzerResult
-                                report={report}
-                                onReset={() => setStep('input')}
-                            />
-                        </div>
-                    )}
+{step === 'result' && (
+  <div className="max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
+    {report ? (
+      <AnalyzerResult
+        report={report}
+        onReset={() => { setStep('input'); setReport(null); setAnalysisError('') }}
+        aiReport={aiReport}
+      />
+    ) : (
+      <div className="text-center py-12 space-y-4">
+        <div className="text-rose-500 mb-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+        </div>
+        <h3 className="text-xl font-bold text-graphite font-display">Analysis Failed</h3>
+        <p className="text-steel text-sm max-w-md mx-auto">{analysisError || 'Something went wrong. The site may be blocking automated requests.'}</p>
+        <p className="text-steel text-xs">Try a different URL or check back later.</p>
+        <button
+          onClick={() => { setStep('input'); setAnalysisError('') }}
+          className="mt-4 bg-graphite text-white px-6 py-3 rounded-lg font-bold uppercase tracking-wide text-sm hover:bg-graphite/90 transition-all"
+        >
+          Try Again
+        </button>
+      </div>
+    )}
+  </div>
+)}
                 </div>
             </div>
         </div>

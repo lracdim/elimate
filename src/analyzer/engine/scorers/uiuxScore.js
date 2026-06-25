@@ -1,30 +1,28 @@
-export const calculateUiUxScore = (metrics) => {
-    let score = 100;
-    const notes = [];
+export function calculateUiUxScore(domMetrics) {
+  const { domDepth = 0, linkCount = 0, buttonCount = 0, elementCount = 0 } = domMetrics;
 
-    // DOM Depth
-    if (metrics.domDepth > 30) {
-        score -= 20;
-        notes.push("Excessive DOM Depth detected");
-    } else if (metrics.domDepth > 15) {
-        score -= 10;
-    }
+  let score = 100;
 
-    // Element Spacing / Density (Proxy: Elements per Link/Button)
-    const interactiveTotal = metrics.linkCount + metrics.buttonCount;
-    if (interactiveTotal > 0) {
-        const ratio = metrics.elementCount / interactiveTotal;
-        if (ratio < 2) {
-            // Too crowded? Or just a link farm?
-            score -= 5;
-        } else if (ratio > 50) {
-            // Sparse interactives, hard to navigate?
-            score -= 5;
-        }
-    }
+  if (domDepth > 25) score -= 30;
+  else if (domDepth > 20) score -= 20;
+  else if (domDepth > 15) score -= 10;
+  else if (domDepth > 12) score -= 5;
 
-    return {
-        score: Math.max(0, Math.min(100, score)),
-        notes
-    };
-};
+  if (linkCount === 0) score -= 20;
+  else if (linkCount < 3) score -= 10;
+
+  if (buttonCount === 0) score -= 15;
+  else if (buttonCount < 2) score -= 5;
+
+  if (elementCount > 500) score -= 15;
+  else if (elementCount > 300) score -= 8;
+  else if (elementCount < 10) score -= 20;
+  else if (elementCount < 20) score -= 10;
+
+  const notes = [];
+  if (domDepth > 20) notes.push(`DOM depth of ${domDepth} causes layout complexity`);
+  if (buttonCount === 0) notes.push('No call-to-action buttons detected');
+  if (linkCount < 3) notes.push('Insufficient navigation links');
+
+  return { score: Math.max(0, score), notes };
+}

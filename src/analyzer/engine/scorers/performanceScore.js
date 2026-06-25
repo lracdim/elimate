@@ -1,18 +1,23 @@
-export const calculatePerformanceScore = (metrics, loadTimeSeconds) => {
-    let score = 100;
+export function calculatePerformanceScore(netMetrics, loadTimeSeconds = 0) {
+  const { scriptCount = 0, cssCount = 0, imageCount = 0 } = netMetrics;
 
-    // Load Time Penalties
-    if (loadTimeSeconds > 3.0) score -= 40;
-    else if (loadTimeSeconds > 2.0) score -= 20;
-    else if (loadTimeSeconds > 1.0) score -= 10;
+  let score = 100;
 
-    // Asset Count Penalties
-    if (metrics.scriptCount > 20) score -= 20;
-    else if (metrics.scriptCount > 10) score -= 10;
+  // Script penalty
+  if (scriptCount > 30) score -= 40;
+  else if (scriptCount > 22) score -= 30;
+  else if (scriptCount > 15) score -= 20;
+  else if (scriptCount > 8) score -= 10;
 
-    if (metrics.cssCount > 5) score -= 10;
+  // Load time penalty
+  if (loadTimeSeconds > 3.0) score -= 30;
+  else if (loadTimeSeconds > 2.0) score -= 20;
+  else if (loadTimeSeconds > 1.0) score -= 10;
 
-    if (metrics.imageCount > 30) score -= 15;
+  // Image penalty (minor)
+  if (imageCount > 40) score -= 10;
+  else if (imageCount > 25) score -= 5;
 
-    return Math.max(0, Math.min(100, score));
-};
+  // Floor: never below 25 for a live site
+  return Math.max(25, Math.round(score));
+}

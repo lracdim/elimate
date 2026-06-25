@@ -13,39 +13,37 @@ export const analyzeWebsite = async (htmlString, url, loadTimeSeconds = 0.5) => 
     const doc = parser.parseFromString(htmlString, 'text/html');
 
     // 2. Gather Metrics
-    const domMetrics = analyzeDOM(doc);
-    const netMetrics = analyzeNetwork(doc);
-    const accessMetrics = analyzeAccessibility(doc);
+  const domMetrics = analyzeDOM(doc);
+  const netMetrics = analyzeNetwork(doc);
 
-    const combinedMetrics = { ...domMetrics, ...netMetrics, ...accessMetrics };
+  // 3. Calculate Scores
+  const uiuxResult = calculateUiUxScore(domMetrics);
+  const uiux = uiuxResult.score;
+  const performance = calculatePerformanceScore(netMetrics, loadTimeSeconds);
+  const content = calculateContentWeight(doc);
+  const seo = calculateSeoScore(doc);
 
-    // 3. Calculate Scores
-    const uiux = calculateUiUxScore(combinedMetrics).score;
-    const performance = calculatePerformanceScore(combinedMetrics, loadTimeSeconds);
-    const content = calculateContentWeight(doc);
-    const seo = calculateSeoScore(doc);
+  // 4. Detect Bottlenecks — pass parsed doc for element-level checks
+  const bottlenecks = detectBottlenecks(domMetrics, netMetrics, doc);
 
-    // 4. Detect Bottlenecks
-    const bottlenecks = detectBottlenecks(combinedMetrics, { uiux, performance, content, seo });
-
-    // 5. Structure Report
-    return {
-        url,
-        timestamp: new Date().toISOString(),
-        scores: {
-            uiux,
-            performance,
-            contentWeight: content.score,
-            seo
-        },
-        metrics: {
-            loadTimeSeconds,
-            domDepth: domMetrics.domDepth,
-            scriptCount: netMetrics.scriptCount,
-            cssCount: netMetrics.cssCount,
-            imageCount: netMetrics.imageCount,
-            contentClassification: content.label
-        },
-        bottlenecks
-    };
+  // 5. Structure Report
+  return {
+    url,
+    timestamp: new Date().toISOString(),
+    scores: {
+      uiux,
+      performance,
+      contentWeight: content.score,
+      seo
+    },
+    metrics: {
+      loadTimeSeconds: Math.min(loadTimeSeconds, 5.0),
+      domDepth: domMetrics.domDepth,
+      scriptCount: netMetrics.scriptCount,
+      cssCount: netMetrics.cssCount,
+      imageCount: netMetrics.imageCount,
+      contentClassification: content.label
+    },
+    bottlenecks
+  };
 };
