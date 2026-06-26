@@ -52,8 +52,21 @@ export function detectBottlenecks(domMetrics, netMetrics, doc) {
       add('Medium', 'Missing Meta Description', 'No meta description found. This hurts SEO click-through rates from search.', 'Add a compelling 150-160 character meta description to every page.');
     }
 
-    const viewport = doc.querySelector('meta[name="viewport"]');
-    if (!viewport) {
+    const viewportSelectors = [
+      'meta[name="viewport"]',
+      'meta[name="Viewport"]', 
+      'meta[NAME="viewport"]',
+    ];
+    const hasViewport = doc && viewportSelectors.some(sel => {
+      try {
+        return doc.querySelector(sel) !== null;
+      } catch(e) {
+        return false;
+      }
+    });
+    const htmlString = doc?.documentElement?.outerHTML || '';
+    const hasViewportInHtml = htmlString.toLowerCase().includes('name="viewport"') || htmlString.toLowerCase().includes("name='viewport'");
+    if (!hasViewport && !hasViewportInHtml) {
       add('High', 'Missing Viewport Meta Tag', 'No viewport meta tag. Site will not render correctly on mobile devices.', 'Add <meta name="viewport" content="width=device-width, initial-scale=1"> to <head>.');
     }
 

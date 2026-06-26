@@ -19,8 +19,16 @@ const NOISE_DOMAINS = [
   'hubspot',
 ];
 
-export const analyzeNetwork = (doc) => {
-  if (!doc) return { scriptCount: 0, cssCount: 0, imageCount: 0, totalAssets: 0 };
+const estimateLoadTime = (scriptCount, imageCount, htmlSize = 0) => {
+  let estimated = 0.5;
+  estimated += scriptCount * 0.05;
+  estimated += imageCount * 0.03;
+  estimated += (htmlSize / 50000) * 0.1;
+  return Math.round(estimated * 100) / 100;
+};
+
+export const analyzeNetwork = (doc, htmlSize = 0) => {
+  if (!doc) return { scriptCount: 0, cssCount: 0, imageCount: 0, totalAssets: 0, loadTimeSeconds: 0.5 };
 
   const allScripts = doc.getElementsByTagName('script');
   const externalScripts = [...allScripts].filter(s => {
@@ -35,27 +43,30 @@ export const analyzeNetwork = (doc) => {
 
   const seen = new Set();
   const dedupedScripts = externalScripts.filter(s => {
-    const src = s.getAttribute('src') || '';
-    const base = src.split('?')[0].split('/').pop();
+    const src_slice = s.getAttribute('src') || '';
+    const base = src_slice.split('?')[0].split('/').pop();
     if (seen.has(base)) return false;
     seen.add(base);
     return true;
   });
 
   const scriptCount = dedupedScripts.length;
-  const links = doc.getElementsByTagName('link'); // CSS often here
+  const links = doc.getElementsByTagName('link');
   const images = doc.getElementsByTagName('img');
 
-  // Count external CSS
   let cssCount = 0;
   for (let l of links) {
     if (l.rel === 'stylesheet') cssCount++;
   }
 
+  const imageCount = images.length;
+  const loadTimeSeconds = estimateLoadTime(scriptCount, imageCount, htmlSize);
+
   return {
     scriptCount,
     cssCount,
-    imageCount: images.length,
-    totalAssets: dedupedScripts.length + cssCount + images.length
+    imageCount,
+    totalAssets: scriptCount + cssCount + imageCount,
+    loadTimeSeconds
   };
 };
